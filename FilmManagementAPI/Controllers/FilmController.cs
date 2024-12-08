@@ -131,6 +131,24 @@ namespace FilmManagementAPI.Controllers
             return Ok(films);
         }
 
+        [HttpGet("search")]
+        public async Task<ActionResult<IEnumerable<Film>>> SearchFilms(string title)
+        {
+            // Film adında geçen kelimelere göre arama yapıyoruz (case-insensitive)
+            var films = await _context.Films
+                .Where(f => f.Title.ToLower().Contains(title.ToLower()))
+                .ToListAsync();
+
+            // Eğer film bulunamazsa hata mesajı döndür
+            if (!films.Any())
+            {
+                return NotFound(new { message = $"'{title}' kelimesini içeren film bulunamadı." });
+            }
+
+            return Ok(films);
+        }
+
+
 
 
     }
