@@ -95,6 +95,44 @@ namespace FilmManagementAPI.Controllers
 
             return NoContent();
         }
+
+        [HttpGet("filter")]
+        public async Task<ActionResult<IEnumerable<Film>>> FilterFilms(string? genre, string? director, int? releaseYear)
+        {
+            // Veritabanında sorguyu başlatıyoruz
+            var query = _context.Films.AsQueryable();
+
+            // Tür filtrelemesi
+            if (!string.IsNullOrEmpty(genre))
+            {
+                query = query.Where(f => f.Genre.ToLower() == genre.ToLower());
+            }
+
+            // Yönetmen filtrelemesi
+            if (!string.IsNullOrEmpty(director))
+            {
+                query = query.Where(f => f.Director.ToLower() == director.ToLower());
+            }
+
+            // Yayın yılı filtrelemesi
+            if (releaseYear.HasValue)
+            {
+                query = query.Where(f => f.ReleaseYear == releaseYear.Value);
+            }
+
+            // Sorguyu çalıştır ve sonuçları döndür
+            var films = await query.ToListAsync();
+
+            if (!films.Any())
+            {
+                return NotFound(new { message = "Filtreye uygun film bulunamadı." });
+            }
+
+            return Ok(films);
+        }
+
+
+
     }
 
 }
