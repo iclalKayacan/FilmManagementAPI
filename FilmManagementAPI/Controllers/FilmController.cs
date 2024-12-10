@@ -115,7 +115,6 @@ namespace FilmManagementAPI.Controllers
         [HttpGet("filter")]
         public async Task<ActionResult<IEnumerable<Film>>> FilterFilms(string? genre, string? director, int? releaseYear)
         {
-            // Veritabanında sorguyu başlatıyoruz
             var query = _context.Films.AsQueryable();
 
             // Tür filtrelemesi
@@ -136,7 +135,6 @@ namespace FilmManagementAPI.Controllers
                 query = query.Where(f => f.ReleaseYear == releaseYear.Value);
             }
 
-            // Sorguyu çalıştır ve sonuçları döndür
             var films = await query.ToListAsync();
 
             if (!films.Any())
@@ -150,12 +148,11 @@ namespace FilmManagementAPI.Controllers
         [HttpGet("search")]
         public async Task<ActionResult<IEnumerable<Film>>> SearchFilms(string title)
         {
-            // Film adında geçen kelimelere göre arama yapıyoruz (case-insensitive)
+            // (case-insensitive)
             var films = await _context.Films
                 .Where(f => f.Title.ToLower().Contains(title.ToLower()))
                 .ToListAsync();
 
-            // Eğer film bulunamazsa hata mesajı döndür
             if (!films.Any())
             {
                 return NotFound(new { message = $"'{title}' kelimesini içeren film bulunamadı." });
@@ -166,13 +163,12 @@ namespace FilmManagementAPI.Controllers
         [HttpPost("{filmId}/rate")]
         public async Task<IActionResult> RateFilm(int filmId, [FromBody] int rating)
         {
-            // Puan kontrolü (1-10 arası olmalı)
             if (rating < 1 || rating > 10)
             {
                 return BadRequest(new { message = "Puan 1 ile 10 arasında olmalıdır." });
             }
 
-            // Filmi bul
+            
             var film = await _context.Films.Include(f => f.Ratings).FirstOrDefaultAsync(f => f.Id == filmId);
             if (film == null)
             {
