@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using FilmManagementAPI.Data;
 using FilmManagementAPI.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace FilmManagementAPI.Controllers
 {
@@ -27,18 +28,33 @@ namespace FilmManagementAPI.Controllers
         }
 
         // GET: api/films/{id}
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Film>> GetFilm(int id)
+        [HttpGet("{filmId}")]
+        public async Task<ActionResult<Film>> GetFilm(int filmId)
         {
-            var film = await _context.Films.FindAsync(id);
+            var film = await _context.Films
+                .Include(f => f.Ratings)
+                .FirstOrDefaultAsync(f => f.Id == filmId);
 
             if (film == null)
             {
-                return NotFound();
+                return NotFound(new { message = "Film bulunamadı." });
             }
 
-            return film;
+            var averageRating = film.Ratings.Any() ? film.Ratings.Average(r => r.Rating) : 0;
+
+            return Ok(new
+            {
+                film.Id,
+                film.Title,
+                film.Director,
+                film.Genre,
+                film.ReleaseYear,
+                AverageRating = averageRating,
+                RatingsCount = film.Ratings.Count
+            });
         }
+
+
 
         // POST: api/films
         [HttpPost]
@@ -147,6 +163,40 @@ namespace FilmManagementAPI.Controllers
 
             return Ok(films);
         }
+        [HttpPost("{filmId}/rate")]
+        public async Task<IActionResult> RateFilm(int filmId, [FromBody] int rating)
+        {
+            // Puan kontrolü (1-10 arası olmalı)
+            if (rating < 1 || rating > 10)
+            {
+                return BadRequest(new { message = "Puan 1 ile 10 arasında olmalıdır." });
+            }
+
+            // Filmi bul
+            var film = await _context.Films.Include(f => f.Ratings).FirstOrDefaultAsync(f => f.Id == filmId);
+            if (film == null)
+            {
+                return NotFound(new { message = "Film bulunamadı." });
+            }
+
+            // Yeni puanı ekle
+            var filmRating = new FilmRating
+            {
+                FilmId = filmId,
+                Rating = rating
+            };
+            _context.FilmRatings.Add(filmRating);
+
+            // Ortalama puanı güncelle
+            film.Ratings.Add(filmRating);
+            var averageRating = film.Ratings.Average(r => r.Rating);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Puanlama başarılı.", averageRating });
+        }
+
+
+
 
 
 

@@ -8,7 +8,7 @@
         public string Genre { get; set; } = string.Empty;
         public int ReleaseYear { get; set; }
 
-
+        public ICollection<FilmRating> Ratings { get; set; } = new List<FilmRating>();
     }
 
 }

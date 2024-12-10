@@ -13,6 +13,7 @@ namespace FilmManagementAPI.Data
         public DbSet<Comment> Comments { get; set; } = null!;
         public DbSet<UserFavoriteFilm> UserFavoriteFilms { get; set; } = null!;
         public DbSet<UserWatchlist> UserWatchlist { get; set; } = null!;
+        public DbSet<FilmRating> FilmRatings { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
