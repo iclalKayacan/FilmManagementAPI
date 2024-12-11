@@ -1,4 +1,6 @@
-﻿namespace FilmManagementAPI.Models
+﻿using System.Text.Json.Serialization;
+
+namespace FilmManagementAPI.Models
 {
     public class Film
     {
@@ -8,6 +10,7 @@
         public string Genre { get; set; } = string.Empty;
         public int ReleaseYear { get; set; }
 
+        [JsonIgnore]
         public ICollection<FilmRating> Ratings { get; set; } = new List<FilmRating>();
     }
 

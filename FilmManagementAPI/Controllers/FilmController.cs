@@ -6,12 +6,11 @@ using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using Microsoft.AspNetCore.Authorization;
 using System.Data;
+using FilmManagementAPI.DTOs;
 
 namespace FilmManagementAPI.Controllers
 {
-
     [Route("api/films")]
-
     [ApiController]
     public class FilmController : ControllerBase
     {
@@ -22,15 +21,14 @@ namespace FilmManagementAPI.Controllers
             _context = context;
         }
 
-        // GET: api/films
-        [Authorize]
+        // GET: api/films 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Film>>> GetFilms()
         {
             return await _context.Films.ToListAsync();
         }
 
-        // GET: api/films/{id}
+        // GET: api/films/{id} 
         [HttpGet("{filmId}")]
         public async Task<ActionResult<Film>> GetFilm(int filmId)
         {
@@ -57,20 +55,28 @@ namespace FilmManagementAPI.Controllers
             });
         }
 
-
-
-        // POST: api/films
+        // POST: api/films 
         [Authorize(Roles = "Admin")]
         [HttpPost]
-        public async Task<ActionResult<Film>> PostFilm(Film film)
+        public async Task<ActionResult<FilmResponse>> PostFilm(Film film)
         {
             _context.Films.Add(film);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetFilm), new { id = film.Id }, film);
+            var response = new FilmResponse
+            {
+                Id = film.Id,
+                Title = film.Title,
+                Director = film.Director,
+                Genre = film.Genre,
+                ReleaseYear = film.ReleaseYear
+            };
+
+            return CreatedAtAction(nameof(GetFilm), new { filmId = film.Id }, response);
         }
 
-        // PUT: api/films/{id}
+        // PUT: api/films/{id} 
+        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> PutFilm(int id, Film film)
         {
@@ -100,22 +106,36 @@ namespace FilmManagementAPI.Controllers
             return NoContent();
         }
 
-        // DELETE: api/films/{id}
+        // DELETE: api/films/{id} 
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteFilm(int id)
         {
-            var film = await _context.Films.FindAsync(id);
-            if (film == null)
+            try
             {
-                return NotFound();
+                var film = await _context.Films.FindAsync(id);
+                if (film == null)
+                {
+                    return NotFound(new { message = $"Film ID {id} bulunamadı. Silme işlemi başarısız." });
+                }
+
+                _context.Films.Remove(film);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = $"Film ID {id} başarıyla silindi." });
             }
-
-            _context.Films.Remove(film);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    message = "Film silme işlemi sırasında bir hata oluştu.",
+                    error = ex.Message
+                });
+            }
         }
 
+
+        // GET: api/films/filter 
         [HttpGet("filter")]
         public async Task<ActionResult<IEnumerable<Film>>> FilterFilms(string? genre, string? director, int? releaseYear)
         {
@@ -149,10 +169,10 @@ namespace FilmManagementAPI.Controllers
             return Ok(films);
         }
 
+        // GET: api/films/search 
         [HttpGet("search")]
         public async Task<ActionResult<IEnumerable<Film>>> SearchFilms(string title)
         {
-            // (case-insensitive)
             var films = await _context.Films
                 .Where(f => f.Title.ToLower().Contains(title.ToLower()))
                 .ToListAsync();
@@ -164,6 +184,8 @@ namespace FilmManagementAPI.Controllers
 
             return Ok(films);
         }
+
+        // POST: api/films/{filmId}/rate 
         [HttpPost("{filmId}/rate")]
         public async Task<IActionResult> RateFilm(int filmId, [FromBody] int rating)
         {
@@ -172,7 +194,6 @@ namespace FilmManagementAPI.Controllers
                 return BadRequest(new { message = "Puan 1 ile 10 arasında olmalıdır." });
             }
 
-            
             var film = await _context.Films.Include(f => f.Ratings).FirstOrDefaultAsync(f => f.Id == filmId);
             if (film == null)
             {
@@ -192,13 +213,5 @@ namespace FilmManagementAPI.Controllers
 
             return Ok(new { message = "Puanlama başarılı.", averageRating });
         }
-
-
-
-
-
-
-
     }
-
 }
