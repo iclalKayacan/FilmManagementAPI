@@ -119,6 +119,72 @@ public class UserController : ControllerBase
 
         return Ok(favoriteFilms);
     }
+    [HttpPost("{userId}/watchlist/{filmId}")]
+    public async Task<IActionResult> AddToWatchlist(int userId, int filmId)
+    {
+        // Kullanıcıyı bul
+        var user = await _context.Users.Include(u => u.Watchlist).ThenInclude(uw => uw.Film).FirstOrDefaultAsync(u => u.Id == userId);
+        if (user == null)
+        {
+            return NotFound(new { message = "Kullanıcı bulunamadı." });
+        }
+
+        var film = await _context.Films.FindAsync(filmId);
+        if (film == null)
+        {
+            return NotFound(new { message = "Film bulunamadı." });
+        }
+
+        if (user.Watchlist.Any(w => w.FilmId == filmId))
+        {
+            return BadRequest(new { message = "Film zaten izleme listesinde." });
+        }
+
+        user.Watchlist.Add(new UserWatchlist { UserId = userId, FilmId = filmId });
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "Film izleme listesine eklendi." });
+    }
+    [HttpDelete("{userId}/watchlist/{filmId}")]
+    public async Task<IActionResult> RemoveFromWatchlist(int userId, int filmId)
+    {
+        var user = await _context.Users.Include(u => u.Watchlist).FirstOrDefaultAsync(u => u.Id == userId);
+        if (user == null)
+        {
+            return NotFound(new { message = "Kullanıcı bulunamadı." });
+        }
+
+        var watchlistFilm = user.Watchlist.FirstOrDefault(w => w.FilmId == filmId);
+        if (watchlistFilm == null)
+        {
+            return NotFound(new { message = "Film izleme listesinde bulunamadı." });
+        }
+
+        user.Watchlist.Remove(watchlistFilm);
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "Film izleme listesinden çıkarıldı." });
+    }
+    [HttpGet("{userId}/watchlist")]
+    public async Task<IActionResult> GetWatchlist(int userId)
+    {
+        var user = await _context.Users.Include(u => u.Watchlist).ThenInclude(uw => uw.Film).FirstOrDefaultAsync(u => u.Id == userId);
+        if (user == null)
+        {
+            return NotFound(new { message = "Kullanıcı bulunamadı." });
+        }
+
+        var watchlistFilms = user.Watchlist.Select(w => new
+        {
+            w.Film.Id,
+            w.Film.Title,
+            w.Film.Director,
+            w.Film.Genre,
+            w.Film.ReleaseYear
+        });
+
+        return Ok(watchlistFilms);
+    }
 
 
 }
