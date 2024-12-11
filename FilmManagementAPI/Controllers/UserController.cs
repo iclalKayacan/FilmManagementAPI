@@ -2,6 +2,12 @@
 using FilmManagementAPI.Models;
 using FilmManagementAPI.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using FilmManagementAPI.Services;
+using FilmManagementAPI.DTOs;
 
 [Route("api/users")]
 [ApiController]
@@ -9,26 +15,38 @@ public class UserController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
 
-    public UserController(ApplicationDbContext context)
+    private readonly TokenService _tokenService;
+
+    public UserController(ApplicationDbContext context, TokenService tokenService)
     {
         _context = context;
+        _tokenService = tokenService;
     }
+
 
     [HttpPost("register")]
     public async Task<IActionResult> Register(User user)
     {
+        user.Role = string.IsNullOrEmpty(user.Role) ? "User" : user.Role;
+
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
         return CreatedAtAction(nameof(GetUser), new { id = user.Id }, user);
     }
 
     [HttpPost("login")]
-    public IActionResult Login(string email, string password)
+    public IActionResult Login([FromBody] LoginRequest request)
     {
-        var user = _context.Users.SingleOrDefault(u => u.Email == email && u.Password == password);
-        if (user == null) return Unauthorized("Invalid credentials");
-        return Ok(user);
+        var user = _context.Users.SingleOrDefault(u => u.Email == request.Email && u.Password == request.Password);
+        if (user == null)
+        {
+            return Unauthorized(new { message = "Geçersiz giriş bilgileri." });
+        }
+
+        var token = _tokenService.GenerateToken(user);
+        return Ok(new { token });
     }
+
 
     [HttpPut("profile")]
     public async Task<IActionResult> UpdateProfile(User user)

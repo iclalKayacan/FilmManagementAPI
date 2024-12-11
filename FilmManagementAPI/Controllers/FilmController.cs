@@ -4,6 +4,8 @@ using FilmManagementAPI.Data;
 using FilmManagementAPI.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
+using Microsoft.AspNetCore.Authorization;
+using System.Data;
 
 namespace FilmManagementAPI.Controllers
 {
@@ -21,6 +23,7 @@ namespace FilmManagementAPI.Controllers
         }
 
         // GET: api/films
+        [Authorize]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Film>>> GetFilms()
         {
@@ -57,6 +60,7 @@ namespace FilmManagementAPI.Controllers
 
 
         // POST: api/films
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<ActionResult<Film>> PostFilm(Film film)
         {
@@ -175,7 +179,6 @@ namespace FilmManagementAPI.Controllers
                 return NotFound(new { message = "Film bulunamadı." });
             }
 
-            // Yeni puanı ekle
             var filmRating = new FilmRating
             {
                 FilmId = filmId,
@@ -183,7 +186,6 @@ namespace FilmManagementAPI.Controllers
             };
             _context.FilmRatings.Add(filmRating);
 
-            // Ortalama puanı güncelle
             film.Ratings.Add(filmRating);
             var averageRating = film.Ratings.Average(r => r.Rating);
             await _context.SaveChangesAsync();
